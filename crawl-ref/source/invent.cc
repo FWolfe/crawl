@@ -522,7 +522,7 @@ string no_selectables_message(int item_selector)
     case OSEL_BEOGH_GIFT:
         return "You aren't carrying anything you can give to a follower.";
     case OSEL_CURSABLE:
-        return "You don't have any cursable items.";
+        return "You aren't wearing any cursable items.";
     case OSEL_UNCURSED_WORN_RINGS:
         return "You aren't wearing any uncursed rings.";
     case OSEL_QUIVER_ACTION:
@@ -1153,7 +1153,9 @@ bool item_is_selected(const item_def &i, int selector)
                 && !item_is_equipped(i);
 
     case OSEL_CURSABLE:
-        return item_is_cursable(i);
+        // the extra check is to prevent cursing a wielded non-weapon
+        return item_is_equipped(i) && item_is_cursable(i)
+               && (&i != you.weapon() || is_weapon(i));
 
     case OSEL_UNCURSED_WORN_RINGS:
         return !i.cursed() && item_is_equipped(i) && itype == OBJ_JEWELLERY
