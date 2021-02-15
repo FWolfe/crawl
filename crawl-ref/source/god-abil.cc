@@ -2172,7 +2172,8 @@ void cheibriados_time_step(int pow) // pow is the number of turns to skip
  */
 void ashenzari_offer_new_curse()
 {
-    if (you.props.exists(AVAILABLE_CURSE_KEY))
+    // No curse at full piety, since shattering resets the curse timer anyway
+    if (piety_rank() >= 5)
         return;
 
     you.props[AVAILABLE_CURSE_KEY] = true;
@@ -2210,6 +2211,50 @@ bool ashenzari_curse_item()
     learned_something_new(HINT_YOU_CURSED);
     you.props.erase(AVAILABLE_CURSE_KEY);
     you.props[ASHENZARI_CURSE_PROGRESS_KEY] = 0;
+
+    return true;
+}
+
+/**
+ * Give a prompt to uncurse (and destroy an item).
+ *
+ * Player can abort without penalty.
+ *
+ * @return      Whether the player uncursed anything.
+ */
+bool ashenzari_uncurse_item()
+{
+    int item_slot = prompt_invent_item("Uncurse and destroy which item?",
+                                       menu_type::invlist,
+                                       OSEL_CURSED_WORN, OPER_ANY,
+                                       invprompt_flag::escape_only);
+    if (prompt_failed(item_slot))
+        return false;
+
+    item_def& item(you.inv[item_slot]);
+
+    if (!yesno(make_stringf("Really remove and destroy %s?%s",
+                            item.name(DESC_THE).c_str(),
+                            you.props.exists(AVAILABLE_CURSE_KEY) ?
+                                " Ashenzari will withdraw the offered vision "
+                                "and curse!"
+                                : "").c_str(),
+                            false, 'n'))
+    {
+        canned_msg(MSG_OK);
+        return false;
+    }
+
+    mprf("You shatter the curse binding %s!", item.name(DESC_THE).c_str());
+    unequip_item(item_equip_slot(you.inv[item_slot]));
+    ash_check_bondage();
+
+    if (you.props.exists(AVAILABLE_CURSE_KEY))
+    {
+        simple_god_message(" withdraws the vision and curse.");
+        you.props.erase(AVAILABLE_CURSE_KEY);
+        you.props[ASHENZARI_CURSE_PROGRESS_KEY] = 0;
+    }
 
     return true;
 }
