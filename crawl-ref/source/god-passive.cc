@@ -567,6 +567,21 @@ static bool _two_handed()
     return wep_type == HANDS_TWO;
 }
 
+static void _curse_boost_skills(const item_def &item)
+{
+    if (!item.props.exists(CURSE_KNOWLEDGE_KEY))
+        return;
+
+    for (auto& curse : item.props[CURSE_KNOWLEDGE_KEY].get_vector())
+    {
+        skill_type sk = static_cast<skill_type>(curse.get_int());
+        if (you.skill_boost.count(sk))
+            you.skill_boost[sk]++;
+        else
+            you.skill_boost[sk] = 1;
+    }
+}
+
 // Checks bondage and sets ash piety
 void ash_check_bondage()
 {
@@ -579,7 +594,6 @@ void ash_check_bondage()
     for (int j = EQ_FIRST_EQUIP; j < NUM_EQUIP; j++)
     {
         const equipment_type i = static_cast<equipment_type>(j);
-        eq_type s;
         // Missing hands mean fewer rings
         if (you.species != SP_OCTOPODE && i == EQ_LEFT_RING
                  && you.get_mutation_level(MUT_MISSING_HAND))
@@ -616,18 +630,15 @@ void ash_check_bondage()
                 const item_def& item = you.inv[you.equip[i]];
                 if (item.cursed() && (i != EQ_WEAPON || is_weapon(item)))
                 {
-                    if (s == ET_WEAPON
-                        && (_two_handed()
-                            || you.get_mutation_level(MUT_MISSING_HAND)))
-                    {
+                    if (i == EQ_WEAPON && _two_handed())
                         num_cursed += 2;
-                    }
                     else
                     {
                         num_cursed++;
                         if (i == EQ_BODY_ARMOUR && is_unrandom_artefact(item, UNRAND_LEAR))
                             num_cursed += 3;
                     }
+                    _curse_boost_skills(item);
                 }
             }
         }
