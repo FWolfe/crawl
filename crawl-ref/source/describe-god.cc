@@ -266,15 +266,47 @@ string god_title(god_type which_god, species_type which_species, int piety)
     return replace_keys(title, replacements);
 }
 
+static string _describe_item_curse(const item_def& item)
+{
+    if (!item.props.exists(CURSE_KNOWLEDGE_KEY))
+        return "None";
+
+    const CrawlVector &curses = item.props[CURSE_KNOWLEDGE_KEY].get_vector();
+
+    if (curses.empty())
+        return "None";
+
+    return comma_separated_fn(curses.begin(), curses.end(),
+            [](CrawlStoreValue curse) {
+                return skill_name(static_cast<skill_type>(curse.get_int()));
+            }, ", ", ", ");
+}
+
 static string _describe_ash_skill_boost()
 {
     ostringstream desc;
     desc.setf(ios::left);
     desc << "<white>";
-    desc << setw(18) << "Bound part";
+    desc << setw(40) << "Bound item";
     desc << setw(30) << "Boosted skills";
-    desc << "Bonus\n";
-    desc << "</white>";
+    desc << "</white>\n";
+
+    for (int j = EQ_FIRST_EQUIP; j < NUM_EQUIP; j++)
+    {
+        const equipment_type i = static_cast<equipment_type>(j);
+        if (you.equip[i] != -1)
+        {
+            const item_def& item = you.inv[you.equip[i]];
+            if (item.cursed())
+            {
+                desc << "<lightred>";
+                desc << setw(40) << item.name(DESC_QUALNAME, true, false, false);
+                desc << setw(30) << _describe_item_curse(item);
+                desc << "</lightred>\n";
+            }
+        }
+    }
+
 
     return desc.str();
 }
